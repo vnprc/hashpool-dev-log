@@ -5,11 +5,25 @@ This week I had three wins:
 - ported my work from the benchmarking tool to the real Sv2 project
 - got it working with a cpu miner
 
-I added my fork of cdk as a dependency to the Sv1 proxy and started generating blinded secrets on share submission. I got this working on my fork of the benchmarking tool (https://github.com/vnprc/benchmarking-tool/tree/hashpool-demo) and realized that in order to sign the blinded secrets the next step would involve modifying solo pool, which is written in typescript. There is a typescript cashu library in active development but I don't think the benefits of using the benchmarking tool outweigh the complexity of adding more codebases in different languages. I realized that I could drop the benchmarking tool and just run Sv2 daemons directly to keep all development within the Sv2 and cdk projects. I have been looking for a hacky shortcut since I started this project and this week I realized that the 'right' way to build it is actually the shortest path to my goal.
+I added my fork of cdk as a dependency to the Sv1 proxy and started generating blinded secrets on share submission. I got this working 
+on my fork of the benchmarking tool (https://github.com/vnprc/benchmarking-tool/tree/hashpool-demo) and realized that in order to sign 
+the blinded secrets the next step would involve modifying solo pool, which is written in typescript. There is a typescript cashu 
+library in active development but I don't think the benefits of using the benchmarking tool outweigh the complexity of adding more 
+codebases in different languages. I realized that I could drop the benchmarking tool and just run Sv2 daemons directly to keep all 
+development within the Sv2 and cdk projects. I have been looking for a hacky shortcut since I started this project and this week I 
+realized that the 'right' way to build it is actually the shortest path to my goal.
 
-I found this awesome getting started site (https://stratumprotocol.org/getting-started/) and using the easy mode instructions I was able to point a CPU miner at the public testnet Sv2 instance. With this stack I ported over my blinded secret code from the simple Sv1 proxy in the benchmarking tool to the Sv2 translator proxy (https://github.com/vnprc/stratum/tree/hashpool-demo). I fake the stuff the wallet needs from the mint and randomly generate blinded secrets instead of deterministic generation. This let me produce blinded secrets without any extra work to manage the mint state.
+I found this awesome getting started site (https://stratumprotocol.org/getting-started/) and using the easy mode instructions I was 
+able to point a CPU miner at the public testnet Sv2 instance. With this stack I ported over my blinded secret code from the simple Sv1 
+proxy in the benchmarking tool to the Sv2 translator proxy (https://github.com/vnprc/stratum/tree/hashpool-demo). I fake the stuff the 
+wallet needs from the mint and randomly generate blinded secrets instead of deterministic generation. This let me produce blinded 
+secrets without any extra work to manage the mint state.
 
-I also played with the cpu miner found in those instructions and found that it was easy to get running with the right settings. I can pull 47 megahash on my macbook, which is plenty of juice to generate eHash tokens. The advantage of this setup is that I don't need to mess with my bitaxe anymore to produce hashrate. The bitaxe will prove useful for testing the final product but reconfiguring it is very slow and adds a network connection to the critical path that will likely cause problems during a live demo. With the cpu miner I can demo the full system with only my laptop and an internet connection.
+I also played with the cpu miner found in those instructions and found that it was easy to get running with the right settings. I can 
+pull 47 megahash on my macbook, which is plenty of juice to generate eHash tokens. The advantage of this setup is that I don't need to 
+mess with my bitaxe anymore to produce hashrate. The bitaxe will prove useful for testing the final product but reconfiguring it is 
+very slow and adds a network connection to the critical path that will likely cause problems during a live demo. With the cpu miner I 
+can demo the full system with only my laptop and an internet connection.
 
 You can try it out yourself:
 git clone git@github.com:vnprc/stratum.git
@@ -24,7 +38,8 @@ I have adjusted the proxy settings to tune the rate of mining shares produced by
 
 Next week dev goals:
 1. adapt my setup to run all roles (https://stratumprotocol.org/getting-started/#ii-getting-started---running-all-roles)
-  - The publicly available Sv2 pool was not accepting connections at first. I posted to the stratum discord and gitgab fixed it quickly but this is a dependency I need to remove for a successful demo.
+  - The publicly available Sv2 pool was not accepting connections at first. I posted to the stratum discord and gitgab fixed it quickly 
+    but this is a dependency I need to remove for a successful demo.
 2. Add a cashu mint to pool
   - it needs to handle keyset generation and signing blinded secrets
 3. Find a way to include blinded secrets and signatures in the stratum share submission request and response messages

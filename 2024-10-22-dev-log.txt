@@ -1,22 +1,57 @@
 Hashpool dev log 10/22
 
-I have not been making regular dev log updates due to personal and business travel, but I have not been idle. As Average Gary let me know, it's time to get back up on the horse. Side note: shout out to Gary! You are like a boxing coach who keeps me going when my internal drive starts to flag. Thank you, brother. <3
+I have not been making regular dev log updates due to personal and business travel, but I have not been idle. As Average Gary let me 
+know, it's time to get back up on the horse. Side note: shout out to Gary! You are like a boxing coach who keeps me going when my 
+internal drive starts to flag. Thank you, brother. <3
 
-In the process of creating the presentation I delivered at btc++ I have uncovered significant gaps in my thinking. The biggest of these is my naive conception of PPLNS payouts. I was originally picturing what I now know is called proportional mining, where all shares are paid once each time a block is found. This is a bad idea for public pools because it leads to a behavior called pool hopping, which dramatically increases pool hashrate variability. It's actually not terrible if you have a whitelist of miners. I may use this payout method for the passthrough construction if it makes sense to do so but I suspect that once I code up the payout calculations it will be simpler and easier not to reimplement payouts. There is a lack of quality educational material about pool payouts but I managed to find two good sources: a 2011 bitcointalk thread and some random blog post from MintPond, a zcoin mining pool. The second reply on bitcointalk basically describes the use case of ehash at a high level. This is great confirmation that I'm on the right track! All the best ideas have already been discussed 10 years ago on bitcointalk. :)
+In the process of creating the presentation I delivered at btc++ I have uncovered significant gaps in my thinking. The biggest of these 
+is my naive conception of PPLNS payouts. I was originally picturing what I now know is called proportional mining, where all shares are 
+paid once each time a block is found. This is a bad idea for public pools because it leads to a behavior called pool hopping, which 
+dramatically increases pool hashrate variability. It's actually not terrible if you have a whitelist of miners. I may use this payout 
+method for the passthrough construction if it makes sense to do so but I suspect that once I code up the payout calculations it will be 
+simpler and easier not to reimplement payouts. There is a lack of quality educational material about pool payouts but I managed to find 
+two good sources: a 2011 bitcointalk thread and some random blog post from MintPond, a zcoin mining pool. The second reply on 
+bitcointalk basically describes the use case of ehash at a high level. This is great confirmation that I'm on the right track! All the 
+best ideas have already been discussed 10 years ago on bitcointalk. :)
 
 https://bitcointalk.org/index.php?topic=39832
 https://mintpond.com/b/prop-vs-pplns-vs-pps-mining-pool-reward-systems
 
-With newfound understanding I rewrote the slide explaining how and why PPLNS works. I realized that I was barking up the wrong tree with an exponential decay function. I think that might work but it's actually much simpler to use a linear decay function. All we need to do is amortize share payouts to prevent pool hopping and a linear decay makes the math much simpler to understand. I have found that having simplicity as an engineering goal produces far better results in the long run, so let's keep it simple until we identify a need to make it complex.
+With newfound understanding I rewrote the slide explaining how and why PPLNS works. I realized that I was barking up the wrong tree 
+with an exponential decay function. I think that might work but it's actually much simpler to use a linear decay function. All we need 
+to do is amortize share payouts to prevent pool hopping and a linear decay makes the math much simpler to understand. I have found that 
+having simplicity as an engineering goal produces far better results in the long run, so let's keep it simple until we identify a need 
+to make it complex.
 
-At BTC++ Berlin I spent the week explaining my idea and sharpening my thoughts on it. After the conference I also had some productive conversations on the stratum v2 discord server research channel that have driven further improvements in my understanding. I brought away two big realizations from these conversations:
+At BTC++ Berlin I spent the week explaining my idea and sharpening my thoughts on it. After the conference I also had some productive 
+conversations on the stratum v2 discord server research channel that have driven further improvements in my understanding. I brought 
+away two big realizations from these conversations:
 
-First: existing pools combine the roles of pricing hashrate and producing block templates. This is the moral hazard that has lead to an unhealthy market. Hashpool separates out the role of pricing hashrate. I want to get to a place where I can separate out block template production, but that won't be in the first version. At the end of the day pools should be dumb aggregators of hashrate that compete only in the quality of service they deliver, not via externalities to the core business like monopoly market positioning, deep capital accounts, or political connections.
+First: existing pools combine the roles of pricing hashrate and producing block templates. This is the moral hazard that has lead to an 
+unhealthy market. Hashpool separates out the role of pricing hashrate. I want to get to a place where I can separate out block template 
+production, but that won't be in the first version. At the end of the day pools should be dumb aggregators of hashrate that compete 
+only in the quality of service they deliver, not via externalities to the core business like monopoly market positioning, deep capital 
+accounts, or political connections.
 
-My second realization, driven by the discussion with Matt Corallo on Discord, was that Hashpool is actually two different ideas. It combines the concept of a self-hosted adjunct mining pool with an ecash-powered free market for hashrate. You can build either concept in isolation but there are some synergies in combining them. Smaller pools should cater to smaller miners, so the adjunct mining pool concept really needs micropayments to make sense. You can build a mining pool with BOLT12 today, in fact Ocean and Braiins have already done this. Another micropayment solution is ecash payouts. I like this solution for its architectural simplicity, which I believe will allow for more innovation in the long run. For hashpool, you need a cashu server to implement ehash tokens. Since you are already running cashu to account for mining shares, it is a small leap to use it for payouts as well. This reduces the burden on wallets to support BOLT12 payouts and will drive far better UX due to the simplicity of the cashu spec. The other main benefit of building hashpool as an adjunct mining pool is that self-hosted Hashpools will be far more resilient to interference from the state. It's much harder to play whack-a-mole than to take down one large centralized service provider. With robust ehash marketplaces it should be easy to buy and sell ehash from different Hashpools on the same exchange.
+My second realization, driven by the discussion with Matt Corallo on Discord, was that Hashpool is actually two different ideas. It 
+combines the concept of a self-hosted adjunct mining pool with an ecash-powered free market for hashrate. You can build either concept 
+in isolation but there are some synergies in combining them. Smaller pools should cater to smaller miners, so the adjunct mining pool 
+concept really needs micropayments to make sense. You can build a mining pool with BOLT12 today, in fact Ocean and Braiins have already 
+done this. Another micropayment solution is ecash payouts. I like this solution for its architectural simplicity, which I believe will 
+allow for more innovation in the long run. For hashpool, you need a cashu server to implement ehash tokens. Since you are already 
+running cashu to account for mining shares, it is a small leap to use it for payouts as well. This reduces the burden on wallets to 
+support BOLT12 payouts and will drive far better UX due to the simplicity of the cashu spec. The other main benefit of building 
+hashpool as an adjunct mining pool is that self-hosted Hashpools will be far more resilient to interference from the state. It's much 
+harder to play whack-a-mole than to take down one large centralized service provider. With robust ehash marketplaces it should be easy 
+to buy and sell ehash from different Hashpools on the same exchange.
 
-Also, Bob McElrath of Braidpool commented during the discord discussion that I may have solved one of the problems they are wrestling with. They were also closing in on the idea of adjunct mining pools. This is another important signal that I'm on the right track. Another team working on a different design with a different approach also determined that a layered mining pool model served their needs best.
+Also, Bob McElrath of Braidpool commented during the discord discussion that I may have solved one of the problems they are wrestling 
+with. They were also closing in on the idea of adjunct mining pools. This is another important signal that I'm on the right track. 
+Another team working on a different design with a different approach also determined that a layered mining pool model served their 
+needs best.
 
-At the BTC++ hackathon I hooked up with some awesome devs who helped me nixify my setup. This is a huge win for me personally since my previous setup was to open 6 tabs and manually run a process in each tab. Now I can spin up the whole thing with a single terminal command, and it has a sexy terminal UI to boot!
+At the BTC++ hackathon I hooked up with some awesome devs who helped me nixify my setup. This is a huge win for me personally since my 
+previous setup was to open 6 tabs and manually run a process in each tab. Now I can spin up the whole thing with a single terminal 
+command, and it has a sexy terminal UI to boot!
 
 This week is TABconf. I hope it is at least as productive as btc++! I suspect it will be even more so.
