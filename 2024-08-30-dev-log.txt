@@ -1,0 +1,48 @@
+Hashpool dev log week of 8/26 - 8/30
+
+Gary suggested I create a log of my dev work and share it with y'all to help ensure I'm making progress and identify problems or suboptimal decisions early on. Great idea, Gary!
+
+My initial development goal is to hack up a demo project with a mining pool and cashu mint that can generate an ecash token for each mining share submitted. I want something to show off at TABConf to help people grok the concept behind hashpool. It would be so sick if I could generate testnet eHash tokens and give them away at the conference. 🤙
+
+The architecture is pretty simple at this stage:
+
+           miner                    mining pool
+
+ASIC -> stratum proxy <----------> stratum server 
+              ^                          ^
+              |                          |
+              v                          v
+         cashu wallet                cashu mint
+
+1. ASIC submits mining share
+2. stratum proxy validates mining share and requests blinded secret from cashu wallet
+3. stratum proxy submits the mining share and blinded secret to stratum server
+4. stratum server validates mining share
+5. if validation succeeds stratum server requests cashu mint to sign the blinded secret
+6. stratum server sends signature to stratum proxy
+7. stratum proxy sends signature to cashu wallet
+8. cashu wallet unblinds signature, the combination of unblinded signature and unblinded secret is now an ecash token 🎉
+
+Or potentially:
+...
+6. cashu mint submits signature directly to cashu wallet
+7. cashu wallet unblinds signature, the combination of unblinded signature and unblinded secret is now an ecash token 🎉
+
+I am not sure yet which approach makes the most sense but I'll cross that bridge when I get to it.
+
+I struggled to get a docker stack running that includes all the moving pieces I need. First I tried to run the Sv2 benchmarking tool which I stood up easily enough but I found I could only submit stale shares. I asked for help on stratum discord and started on plan B. Plan B was to create a docker container running bitcoind and ckpool. I got it stood up only to learn that testnet3 takes a while to sync and ckpool does not yet support testnet4. At this point I stumbled upon the sv2-workshop repo, which honestly looks perfect for my purposes. Before I could explore this project I got some helpful feedback on the benchmarking tool. It turns out it was rejecting my shares because I had entered a mainnet bitcoin address in the user field instead of a testnet4 address. 🤦 Once I fixed this dumb mistake I was able to mine with the benchmark docker stack. \o/ I shelved plans to explore the sv2-workshop project in favor of forward progress.
+
+Next step: create a blinded secret. I forked the benchmarking tool repo (https://github.com/vnprc/benchmarking-tool/tree/hashpool-demo) and added a println statement to the place in the code where I need to generate the blinded secret. At this point I was assuming I could use nutshell to generate blinded secrets so I added a nutshell-wallet and nutshell-mint docker containers. When I went looking for the right API call I realized that nutshell doesn't offer the functionality I need. It generates the blinded secret and immediately POSTs it to the mint server. This is neither scalable nor atomic. I want to bundle the cashu network call with the stratum call.
+
+I found the function I need in the moksha rust cashu library. When I tried to add this dependency to the sv2 benchmarking tool I ran into conflicting dependency versions. It seems that moksha is a little out of date. The other cashu rust library, cdk, bundles the blinded secret generation and network call into a single function just like nutshell does. I asked the cashu devs for help and the consensus seems to be that cdk is more actively maintained so I should open a PR to expose the functionality I need. I just pushed this draft PR out today: https://github.com/cashubtc/cdk/pull/309.
+
+Next week: add cdk as a dependency to my fork of the benchmarking tool and use the new function to generate a blinded secret. Find a way to add the blinded secret to the stratum network call.
+
+Questions:
+Should I use docker or nix? I'm not really skilled with either tool but the LLM I queried indicated that docker was better for rapid development.
+
+Is the benchmarking tool the right stack to build on? It has a very simple one-file stratum proxy that I can develop on, which is nice. But there is a lot going on in this docker stack and I definitely don't need most of it. The grafana dashboard is sick, though. It will make for an impressive demo if I can pull it off in time.
+
+Am I correct to require the ecash and stratum services share a single network call? The potential for error conditions for two different network calls makes my head hurt. That is not a design I think will be successful long-term. Does it matter at this point? One goal of building this demo is to quickly identify architectural challenges and settle on the best design. It seems wrong to make obvious mistakes at this point. I'm trying to find the non-obvious mistakes.
+
+I am not very familiar with the stratum protocol. Is there a field or something where I can stuff some extra data?

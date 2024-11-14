@@ -1,0 +1,38 @@
+Hashpool dev log 9/15
+
+I made good progress this week:
+- switched from the hosted template provider to running my own full stack
+  - this required me to spin up a testnet4 bitcoin node
+- added a cashu mint to the pool role
+- added `keyset_id` field to the SetupConnectionSuccess struct
+  - more importantly, I learned why this approach won't work and what approach will
+
+In order to get off of the hosted template provider I simply followed the instructions in the "Running all Roles" section of the [guide](https://stratumprotocol.org/getting-started/#ii-getting-started---running-all-roles). The Stratum v2 documentation and project maturity has been super helpful. It would be very hard to get a project like this off the ground if I wasn't able to stand on the shoulders of these giants.
+
+I spun up a testnet4 node using Sjors' fork. It worked like a charm. Testnet4 is being added to the next major bitcoind release so I might want to switch over if I begin having issues with my node, but so far so good.
+
+I added a cashu mint to the pool role using cdk. At this point it didn't do anything but just getting it to compile and run was further than I got with moksha. No dependency issues, yay!
+
+I took some time to explore the stratum codebase and cashu protocol more deeply and work out a plan for how to generate the keyset and pass it to the client side. I decided to add a keyset_id field to the SetupConnectionSuccess message struct. The keyset ID is the one piece of information the wallet needs to produce valid blinded signatures. Normally, a collection of keyset IDs is used by the wallet software to generate different denominations of ecash but a single one will do for my purposes. At this stage, I'm just showing what is possible and scouting the path ahead. 
+
+It took another day to understand the stratum plumbing enough to pass the message along from pool instantiation to the SetupConnectionSuccess message. Once I appeased all of the rust compiler's demands I started it up to kick the tires and found a nice error:
+
+2024-09-13T02:59:39.897045Z  INFO pool_sv2::lib::template_receiver: Connected to template distribution server at 127.0.0.1:8442
+2024-09-13T02:59:40.011559Z ERROR pool_sv2::lib: Could not connect to Template Provider: Roles Logic SV2 error: `BinarySv2Error(DecodableConversionError)`
+2024-09-13T02:59:40.011581Z ERROR network_helpers_sv2::noise_connection_tokio: Disconnecting from client due to error receiving: receiving from an empty and closed channel - 127.0.0.1:8442
+
+Something in the stack didn't appreciate that I had changed the message format! A little more digging revealed that bitcoind was listening on localhost:8442. I don't need to modify any messages being sent to bitcoind, only messages between the pool and translator proxy. So my hacky code changes were applied more broadly than needed and this conflicted with what bitcoind was expecting.
+
+Thankfully, @fi3 on the discord showed me the way: I need to write a Sv2 extension and define my own message type. Even better, @fi3 has already written one that I can use for a reference! \o/
+
+Next week goals:
+- refactor my branch into a Sv2 extension
+- define a new message type to be used when a translator proxy daemon connects to a pool daemon
+  - include `keyset_id` field
+- in the translator proxy, retrieve the keyset_id from the pool and use it to produce blinded secrets
+- define a new share submission message type that includes the blinded secret
+- pool: sign the blinded message when a share submission is accepted
+- define a new share submission accepted message type that includes the blinded signature from the pool
+- proxy: unblind and store the signature in the wallet
+
+I'm getting a little anxious about meeting my deadline but I remain focused on forward progress. There are a few hack days built into the berlin conference so I may have a complete demo in time for TAB even if it's not working for BTC++. I calm myself with the knowledge that the deadline is artificial and self-imposed. It exists only for motivational purposes.

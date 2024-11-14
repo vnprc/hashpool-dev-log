@@ -1,0 +1,43 @@
+Hashpool dev log 11/13
+
+TABconf was great! I spent the two workshop days hacking on hashpool with Gary. We don't get to meet in person much, even though we 
+live relatively close. We didn't produce a code branch that compiles but Gary's knowledge of Sv2 was very useful in navigating the 
+codebase and understanding the flaws of my previous design. When I returned home and continued work I was able to reference the two 
+branches we created at TAB to push forward. I was previously trying to send the keyset_id downstream to the proxy on the 
+SetupConnection message, but this is a common message that is shared between many Sv2 roles which explains my issues with the job 
+declarator. A better design is to include the keyset_id on the extended channel success message which does not involve the job 
+declarator.
+
+I gave my talk at 9am on the last day of the conference. Honestly, I was not feeling 100% so it was kind of low energy. I feel like I 
+did a better job at btc++ so I'm glad it's the one with a recording. After this I hosted the Lightning Socratic Seminar and sat on a 
+Mining Socratic Panel which I feel went really well. All of my events were in the socratic village which doesn't allow recordings.
+
+In the two weeks since then I have successully implemented passing the keyset_id downstream from the pool to the proxy. The proxy now 
+uses the keyset_id to generate blinded secrets. Passing the blinded secret around is more complicated than the keyset_id. keyset_id can 
+be represented as a u64, which is a primitive type. The blinded secret is composed of multiple types, including a cryptgraphic key. I 
+implemented a Sv2BlindedMessage struct using Sv2's custom data types to enable it to be serialized and sent back upstream. I had a hell 
+of a time getting it to derive the Serialize and Deserialize trait for this struct. I think I was just pushing myself too hard under 
+false time constraints. After a night of rest I was able to find out the problem. I needed to import Decodable and Encodable from both 
+the binary_codec_sv2 and the derive_codec_sv2 crates. These traits are aliased to Serialize and Deserialize everywhere in the codebase. 
+This confusing arrangement threw me for a loop. I should find out why it's written this way.
+
+Another stumbling block I ran into was converting the 33 byte cdk pubkey (actually a secp256k1::PublicKey) into a 32 byte Sv2 PubKey. I 
+just dropped the first byte that encodes the parity of the y coordinate on the elliptic curve and left a TODO comment to resolve later. 
+Now that I think about it, I should probably just add a parity byte to the struct. I will work on this tomorrow.
+
+Aside from dev work I also submitted a grant application to HRF. I went a little crazy and wrote 2500 words to describe my project. The 
+web form asked for a detailed description! When I tried to paste my answer in I realized they only give you 2000 characters. Oops. I 
+threw up a secret [gist](https://gist.github.com/vnprc/a50ecfaf6a55cb3bf52d6ee62d55876a) and linked to it in my application. Just like 
+the talk I gave, this was a good exercise in clarifying my thinking. I can probably reuse this text elsewhere in the future.
+
+I need to apply to Spiral and OpenSats also. Part of the reason I haven't done this yet is that I set a goal to do at least a little 
+dev work every day. And I mean every day. Today marks 13 consecutive days with a github contribution. I'm going to keep the streak 
+going as long as I can; I'm calling it Operation Greenwash. My buddy Johnny pointed out that I need to pay attention to my github 
+profile since grant committees will be looking at it. The green squares in github are far from a perfect metric but if it's the metric 
+I have to game to get a grant then that's just what I will do.
+
+After my experience with Serialize and Deserialize last weekend I realize I need to get better at stopping work and committing what I 
+have rather than thrashing in pursuit of a minor goal. This is an unhealthy approach that will eventually lead to burnout. It's a 
+marathon, not a sprint. I should also get better at queueing up small tasks to knock out on the weekend. I think that contributing to 
+hashpool and/or cdk daily will help me more quickly climb the skill curve and enable me to tackle bigger tasks, which will surely be
+needed to get this thing across the finish line.
